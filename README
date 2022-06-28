@@ -1,0 +1,19 @@
+## Zigcaster
+
+Trying to learn some Zig, using https://github.com/ssloy/tinyraycaster
+
+## Building
+
+```shell
+zig build
+```
+
+## Running directly
+
+```shell
+zig run src/main.zig
+```
+
+## Copyright
+
+See [LICENSE](LICENSE)
