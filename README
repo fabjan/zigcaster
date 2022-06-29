@@ -2,16 +2,28 @@
 
 Trying to learn some Zig, using https://github.com/ssloy/tinyraycaster
 
+## Requirements
+
+* [zig] 0.9.1
+
+[zig]: https://ziglang.org
+
 ## Building
 
 ```shell
-zig build
+./Taskfile build
 ```
 
 ## Running directly
 
 ```shell
-zig run src/main.zig
+./Taskfile run
+```
+
+## Testing
+
+```shell
+./Taskfile test
 ```
 
 ## Copyright
