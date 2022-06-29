@@ -6,7 +6,7 @@ const assert = std.debug.assert;
 /// Pack the given color components in one integer value.
 /// 
 pub fn pack_color(r: u8, g: u8, b: u8, a: u8) u32 {
-    const buf = [4]u8{r, g, b, a};
+    const buf = [4]u8{ r, g, b, a };
     const color = mem.bytesToValue(u32, &buf);
     return mem.bigToNative(u32, color);
 }
@@ -17,7 +17,7 @@ pub fn unpack_color(color: u32) [4]u8 {
 }
 
 pub fn drop_ppm_image(writer: anytype, image: []u32, w: usize, h: usize) anyerror!void {
-    assert(image.len == w*h);
+    assert(image.len == w * h);
 
     try writer.print("P6\n{} {}\n255\n", .{ w, h });
 

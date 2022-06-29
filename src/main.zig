@@ -12,13 +12,13 @@ pub fn main() anyerror!void {
     const win_w: usize = 512;
     const win_h: usize = 512;
 
-    var framebuffer = try allocator.create([win_w*win_h]u32);
+    var framebuffer = try allocator.create([win_w * win_h]u32);
 
     for (framebuffer) |_, x| {
         const i = x % win_w;
         const j = x / win_h;
-        const r = 255.0 * @intToFloat(f32, j)/@intToFloat(f32, win_h);
-        const g = 255.0 * @intToFloat(f32, i)/@intToFloat(f32, win_w);
+        const r = 255.0 * @intToFloat(f32, j) / @intToFloat(f32, win_h);
+        const g = 255.0 * @intToFloat(f32, i) / @intToFloat(f32, win_w);
         const b = 0.0;
 
         framebuffer[x] = draw.pack_color(

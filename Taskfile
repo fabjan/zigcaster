@@ -10,6 +10,10 @@ function help {
     grep function $0 | cut -d' ' -f2 | xargs printf "\t%s\n"
 }
 
+function fmt {
+    zig fmt src/*.zig
+}
+
 function build {
     zig build
 }
