@@ -1,0 +1,38 @@
+#!/bin/bash
+
+# See https://github.com/adriancooney/Taskfile for the inspiration.
+# Run ./Taskfile help for more info.
+
+function help {
+    echo "I'm a Taskfile codifying tasks needed to work with this here code."
+    echo "$0 <task> <args>"
+    echo "Available tasks:"
+    grep function $0 | cut -d' ' -f2 | xargs printf "\t%s\n"
+}
+
+function build {
+    zig build
+}
+
+function run {
+    zig build run
+}
+
+function test {
+    for source in src/*.zig
+    do
+        echo -n "Testing $source: "
+        zig test "$source"
+    done
+}
+
+function todo {
+    sources=$(find . -name '*.zig')
+    todo_pattern='.*TODO (.*)'
+    output_pattern='- [ ] \1: \2'
+    grep TODO $sources | sed -E 's_\./(.*):'"$todo_pattern"'_'"$output_pattern"'_' | sort -u | tr '\t' ' ' | tr -s ' '
+}
+
+TIMEFORMAT="Task completed in %3lR"
+
+time "${@:-help}"
