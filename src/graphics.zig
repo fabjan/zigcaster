@@ -1,10 +1,25 @@
 const std = @import("std");
+const math = std.math;
 const mem = std.mem;
 
 const assert = std.debug.assert;
 
-/// Pack the given color components in one integer value.
-/// 
+pub fn draw_rectangle(image: []u32, img_w: usize, img_h: usize, x: usize, y: usize, w: usize, h: usize, color: u32) void {
+    assert(image.len == img_w * img_h);
+    assert(x + w <= img_w);
+    assert(y + h <= img_h);
+
+    var i: usize = 0;
+    while (i < w) : (i += 1) {
+        var j: usize = 0;
+        while (j < h) : (j += 1) {
+            const cx = x + i;
+            const cy = y + j;
+            image[cx + cy * img_w] = color;
+        }
+    }
+}
+
 pub fn pack_color(r: u8, g: u8, b: u8, a: u8) u32 {
     const buf = [4]u8{ r, g, b, a };
     const color = mem.bytesToValue(u32, &buf);
