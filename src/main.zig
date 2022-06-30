@@ -1,5 +1,6 @@
 const std = @import("std");
 const fs = std.fs;
+const math = std.math;
 
 const graphics = @import("./graphics.zig");
 const map = @import("./map.zig");
@@ -14,6 +15,10 @@ pub fn main() anyerror!void {
     const win_h: usize = 512;
 
     var framebuffer = try allocator.create([win_w * win_h]u32);
+
+    // conts for now
+    const player_x = 3.456;
+    const player_y = 2.345;
 
     // draw backdrop gradient
     for (framebuffer) |_, x| {
@@ -31,12 +36,13 @@ pub fn main() anyerror!void {
         );
     }
 
+    const rect_w = win_w / map.width;
+    const rect_h = win_h / map.height;
+    const cyan = graphics.pack_color(0, 255, 255, 255);
+    const white = graphics.pack_color(255, 255, 255, 255);
+
     // draw map walls
     {
-        const rect_w = win_w / map.width;
-        const rect_h = win_h / map.height;
-        const cyan = graphics.pack_color(0, 255, 255, 255);
-
         var x: usize = 0;
         while (x < map.width) : (x += 1) {
             var y: usize = 0;
@@ -49,8 +55,13 @@ pub fn main() anyerror!void {
         }
     }
 
-    const imageFile = try fs.cwd().createFile("out_2.ppm", .{});
-    defer imageFile.close();
+    // draw the player
+    const px = math.trunc(player_x * @intToFloat(f32, rect_w));
+    const py = math.trunc(player_y * @intToFloat(f32, rect_h));
+    graphics.draw_rectangle(framebuffer, win_w, win_h, @floatToInt(usize, px), @floatToInt(usize, py), 5, 5, white);
 
+    // render output
+    const imageFile = try fs.cwd().createFile("out_3.ppm", .{});
+    defer imageFile.close();
     try graphics.drop_ppm_image(imageFile.writer(), framebuffer[0..], win_w, win_h);
 }
