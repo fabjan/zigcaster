@@ -1,2 +1,6 @@
+// build artifacts
 zig-cache
 zig-out
+
+// testing output
+/*.ppm
