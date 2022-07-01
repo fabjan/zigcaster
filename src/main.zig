@@ -5,6 +5,18 @@ const math = std.math;
 const graphics = @import("./graphics.zig");
 const map = @import("./map.zig");
 
+fn float(n: usize) f32 {
+    return @intToFloat(f32, n);
+}
+
+fn int(x: f32) usize {
+    return @floatToInt(usize, x);
+}
+
+fn byte(x: f32) u8 {
+    return @floatToInt(u8, x);
+}
+
 pub fn main() anyerror!void {
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
     defer arena.deinit();
@@ -25,16 +37,11 @@ pub fn main() anyerror!void {
     for (framebuffer) |_, x| {
         const i = x % win_w;
         const j = x / win_h;
-        const r = 255.0 * @intToFloat(f32, j) / @intToFloat(f32, win_h);
-        const g = 255.0 * @intToFloat(f32, i) / @intToFloat(f32, win_w);
+        const r = 255.0 * float(j) / float(win_h);
+        const g = 255.0 * float(i) / float(win_w);
         const b = 0.0;
 
-        framebuffer[x] = graphics.pack_color(
-            @floatToInt(u8, r),
-            @floatToInt(u8, g),
-            @floatToInt(u8, b),
-            255,
-        );
+        framebuffer[x] = graphics.pack_color(byte(r), byte(g), byte(b), 255);
     }
 
     const rect_w = win_w / map.width;
@@ -57,19 +64,19 @@ pub fn main() anyerror!void {
     }
 
     // draw the player
-    const px = math.trunc(player_x * @intToFloat(f32, rect_w));
-    const py = math.trunc(player_y * @intToFloat(f32, rect_h));
-    graphics.draw_rectangle(framebuffer, win_w, win_h, @floatToInt(usize, px), @floatToInt(usize, py), 5, 5, white);
+    const px = math.trunc(player_x * float(rect_w));
+    const py = math.trunc(player_y * float(rect_h));
+    graphics.draw_rectangle(framebuffer, win_w, win_h, int(px), int(py), 5, 5, white);
 
     // camera calculations
     var c: f32 = 0.0;
     while (c < 20.0) : (c += 0.05) {
         const cx = player_x + c * math.cos(player_a);
         const cy = player_y + c * math.sin(player_a);
-        if (map.data[@floatToInt(usize, cx) + @floatToInt(usize, cy) * map.width] != ' ') break;
+        if (map.data[int(cx) + int(cy) * map.width] != ' ') break;
 
-        const pix_x = @floatToInt(usize, cx * @intToFloat(f32, rect_w));
-        const pix_y = @floatToInt(usize, cy * @intToFloat(f32, rect_h));
+        const pix_x = int(cx * float(rect_w));
+        const pix_y = int(cy * float(rect_h));
         framebuffer[pix_x + pix_y * win_w] = white;
     }
 
