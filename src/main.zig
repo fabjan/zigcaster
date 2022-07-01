@@ -16,9 +16,10 @@ pub fn main() anyerror!void {
 
     var framebuffer = try allocator.create([win_w * win_h]u32);
 
-    // conts for now
-    const player_x = 3.456;
-    const player_y = 2.345;
+    // consts for now
+    const player_x: f32 = 3.456;
+    const player_y: f32 = 2.345;
+    const player_a: f32 = 1.523;
 
     // draw backdrop gradient
     for (framebuffer) |_, x| {
@@ -60,8 +61,20 @@ pub fn main() anyerror!void {
     const py = math.trunc(player_y * @intToFloat(f32, rect_h));
     graphics.draw_rectangle(framebuffer, win_w, win_h, @floatToInt(usize, px), @floatToInt(usize, py), 5, 5, white);
 
+    // camera calculations
+    var c: f32 = 0.0;
+    while (c < 20.0) : (c += 0.05) {
+        const cx = player_x + c * math.cos(player_a);
+        const cy = player_y + c * math.sin(player_a);
+        if (map.data[@floatToInt(usize, cx) + @floatToInt(usize, cy) * map.width] != ' ') break;
+
+        const pix_x = @floatToInt(usize, cx * @intToFloat(f32, rect_w));
+        const pix_y = @floatToInt(usize, cy * @intToFloat(f32, rect_h));
+        framebuffer[pix_x + pix_y * win_w] = white;
+    }
+
     // render output
-    const imageFile = try fs.cwd().createFile("out_3.ppm", .{});
+    const imageFile = try fs.cwd().createFile("out_4.ppm", .{});
     defer imageFile.close();
     try graphics.drop_ppm_image(imageFile.writer(), framebuffer[0..], win_w, win_h);
 }
