@@ -11,11 +11,12 @@ const rect_w = win_w / (map.width * 2);
 const rect_h = win_h / map.height;
 const fov: f32 = math.pi / 3.0;
 const max_dist: f32 = math.sqrt(2.0 * float(map.width * map.width));
+const walltext_size: usize = 64;
+const walltext_count: usize = 6;
 
 const grey = graphics.pack_color(160, 160, 160, 255);
 const white = graphics.pack_color(255, 255, 255, 255);
 const cyan = graphics.pack_color(0, 255, 255, 255);
-var colors = [10]u32{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
 fn float(n: usize) f32 {
     return @intToFloat(f32, n);
@@ -40,18 +41,9 @@ pub fn main() anyerror!void {
     const player_y: f32 = 2.345;
     var player_a: f32 = 1.523;
 
-    // initialize color palette
-    var prng = std.rand.DefaultPrng.init(0);
-    prng.seed(42 + 1337 + 4711);
-    for (colors) |_, i| {
-        colors[i] = graphics.pack_color(prng.random().int(u8), prng.random().int(u8), prng.random().int(u8), 255);
-    }
-
     // initialize textures
     const walltext_file = try fs.cwd().openFile("assets/walltext.ppm", .{});
     defer walltext_file.close();
-    const walltext_size = 64;
-    const walltext_count = 6;
     var walltext = try allocator.alloc(u32, walltext_count * walltext_size * walltext_size);
     try graphics.slurp_ppm_image(walltext_file.reader(), walltext, walltext_count * walltext_size, walltext_size);
 
@@ -64,29 +56,17 @@ pub fn main() anyerror!void {
     }
 
     // draw the game
-    draw_map(framebuffer);
+    draw_map(framebuffer, walltext);
     draw_player(framebuffer, player_x, player_y);
-    draw_view(framebuffer, player_x, player_y, player_a);
-
-    {
-        // texture draw test
-        const texid: usize = 4;
-        var i: usize = 0;
-        while (i < walltext_size) : (i += 1) {
-            var j: usize = 0;
-            while (j < walltext_size) : (j += 1) {
-                framebuffer[i + j * win_w] = walltext[i + texid * walltext_size + j * walltext_size * walltext_count];
-            }
-        }
-    }
+    draw_view(framebuffer, walltext, player_x, player_y, player_a);
 
     // render output
-    const imageFile = try fs.cwd().createFile("out_9.ppm", .{});
+    const imageFile = try fs.cwd().createFile("out_10.ppm", .{});
     defer imageFile.close();
     try graphics.drop_ppm_image(allocator, imageFile.writer(), framebuffer[0..], win_w, win_h);
 }
 
-fn draw_map(framebuffer: []u32) void {
+fn draw_map(framebuffer: []u32, walltext: []u32) void {
     var x: usize = 0;
     while (x < map.width) : (x += 1) {
         var y: usize = 0;
@@ -95,8 +75,8 @@ fn draw_map(framebuffer: []u32) void {
             if (cell == ' ') continue;
             const rect_x = x * rect_w;
             const rect_y = y * rect_h;
-            const icolor = cell - '0';
-            graphics.draw_rectangle(framebuffer, win_w, win_h, rect_x, rect_y, rect_w, rect_h, colors[icolor]);
+            const texid = cell - '0';
+            graphics.draw_rectangle(framebuffer, win_w, win_h, rect_x, rect_y, rect_w, rect_h, walltext[texid * walltext_size]);
         }
     }
 }
@@ -107,7 +87,7 @@ fn draw_player(framebuffer: []u32, player_x: f32, player_y: f32) void {
     graphics.draw_rectangle(framebuffer, win_w, win_h, int(px), int(py), 5, 5, white);
 }
 
-fn draw_view(framebuffer: []u32, player_x: f32, player_y: f32, player_a: f32) void {
+fn draw_view(framebuffer: []u32, walltext: []u32, player_x: f32, player_y: f32, player_a: f32) void {
     var i: usize = 0;
     while (i < win_w / 2) : (i += 1) {
         const ray_offset = fov * float(i) / float(win_w / 2);
@@ -127,8 +107,17 @@ fn draw_view(framebuffer: []u32, player_x: f32, player_y: f32, player_a: f32) vo
             const cell = map.data[int(cx) + int(cy) * map.width];
             if (cell != ' ') {
                 const column_height = int(float(win_h) / (t * math.cos(angle - player_a)));
-                const icolor = cell - '0';
-                graphics.draw_rectangle(framebuffer, win_w, win_h, win_w / 2 + i, win_h / 2 - column_height / 2, 1, column_height, colors[icolor]);
+                const texid = cell - '0';
+                graphics.draw_rectangle(
+                    framebuffer,
+                    win_w,
+                    win_h,
+                    win_w / 2 + i,
+                    win_h / 2 - column_height / 2,
+                    1,
+                    column_height,
+                    walltext[texid * walltext_size],
+                );
                 break;
             }
         }
