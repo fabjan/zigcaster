@@ -15,7 +15,7 @@ function fmt {
 }
 
 function build {
-    zig build
+    zig build -Drelease-fast=true
 }
 
 function run {
