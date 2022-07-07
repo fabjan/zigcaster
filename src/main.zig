@@ -35,41 +35,55 @@ pub fn main() anyerror!void {
 
     const allocator = arena.allocator();
 
-    // consts for now
+    // initialize player
     const player_x: f32 = 3.456;
     const player_y: f32 = 2.345;
     var player_a: f32 = 1.523;
 
+    // initialize color palette
     var prng = std.rand.DefaultPrng.init(0);
     prng.seed(42 + 1337 + 4711);
     for (colors) |_, i| {
         colors[i] = graphics.pack_color(prng.random().int(u8), prng.random().int(u8), prng.random().int(u8), 255);
     }
 
+    // initialize textures
+    const walltext_file = try fs.cwd().openFile("assets/walltext.ppm", .{});
+    defer walltext_file.close();
+    const walltext_size = 64;
+    const walltext_count = 6;
+    var walltext = try allocator.alloc(u32, walltext_count * walltext_size * walltext_size);
+    try graphics.slurp_ppm_image(walltext_file.reader(), walltext, walltext_count * walltext_size, walltext_size);
+
     var framebuffer = try allocator.alloc(u32, win_w * win_h);
     defer allocator.free(framebuffer);
 
-    var frame: usize = 0;
-    const step = 12;
-    const da = (360.0 / @intToFloat(f32, step));
-    while (frame < 360) : (frame += step) {
-        player_a += 2.0 * math.pi / da;
-
-        // clear frame
-        for (framebuffer) |_, i| {
-            framebuffer[i] = white;
-        }
-
-        draw_map(framebuffer);
-        draw_player(framebuffer, player_x, player_y);
-        draw_view(framebuffer, player_x, player_y, player_a);
-
-        // render output
-        const filename = try std.fmt.allocPrintZ(allocator, "step8_{d:0>3.0}.ppm", .{frame});
-        const imageFile = try fs.cwd().createFile(filename, .{});
-        defer imageFile.close();
-        try graphics.drop_ppm_image(allocator, imageFile.writer(), framebuffer[0..], win_w, win_h);
+    // clear frame
+    for (framebuffer) |_, i| {
+        framebuffer[i] = white;
     }
+
+    // draw the game
+    draw_map(framebuffer);
+    draw_player(framebuffer, player_x, player_y);
+    draw_view(framebuffer, player_x, player_y, player_a);
+
+    {
+        // texture draw test
+        const texid: usize = 4;
+        var i: usize = 0;
+        while (i < walltext_size) : (i += 1) {
+            var j: usize = 0;
+            while (j < walltext_size) : (j += 1) {
+                framebuffer[i + j * win_w] = walltext[i + texid * walltext_size + j * walltext_size * walltext_count];
+            }
+        }
+    }
+
+    // render output
+    const imageFile = try fs.cwd().createFile("out_9.ppm", .{});
+    defer imageFile.close();
+    try graphics.drop_ppm_image(allocator, imageFile.writer(), framebuffer[0..], win_w, win_h);
 }
 
 fn draw_map(framebuffer: []u32) void {

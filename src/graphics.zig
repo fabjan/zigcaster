@@ -1,4 +1,5 @@
 const std = @import("std");
+const fmt = std.fmt;
 const math = std.math;
 const mem = std.mem;
 
@@ -45,6 +46,39 @@ pub fn drop_ppm_image(allocator: mem.Allocator, writer: anytype, image: []u32, w
     }
 
     try writer.writeAll(rgbBytes);
+}
+
+pub fn slurp_ppm_image(reader: anytype, image: []u32, w: usize, h: usize) anyerror!void {
+    assert(image.len == w * h);
+
+    // assert netpbm variant
+    assert('P' == try reader.readByte());
+    assert('6' == try reader.readByte());
+    assert('\n' == try reader.readByte());
+
+    // read size header
+    var wbuf = [4]u8{ 0, 0, 0, 0 };
+    var hbuf = [4]u8{ 0, 0, 0, 0 };
+    const width = try reader.readUntilDelimiter(wbuf[0..], ' ');
+    const height = try reader.readUntilDelimiter(hbuf[0..], '\n');
+
+    // assert color header
+    assert('2' == try reader.readByte());
+    assert('5' == try reader.readByte());
+    assert('5' == try reader.readByte());
+    assert('\n' == try reader.readByte());
+
+    // header reading is complete, let's parse the data
+    assert(w == try fmt.parseUnsigned(usize, width, 10));
+    assert(h == try fmt.parseUnsigned(usize, height, 10));
+
+    var i: usize = 0;
+    while (i < w * h) : (i += 1) {
+        const r = try reader.readByte();
+        const g = try reader.readByte();
+        const b = try reader.readByte();
+        image[i] = pack_color(r, g, b, 255);
+    }
 }
 
 test "can unpack black" {
