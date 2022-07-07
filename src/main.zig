@@ -46,6 +46,9 @@ pub fn main() anyerror!void {
         colors[i] = graphics.pack_color(prng.random().int(u8), prng.random().int(u8), prng.random().int(u8), 255);
     }
 
+    var framebuffer = try allocator.alloc(u32, win_w * win_h);
+    defer allocator.free(framebuffer);
+
     var frame: usize = 0;
     const step = 12;
     const da = (360.0 / @intToFloat(f32, step));
@@ -53,7 +56,6 @@ pub fn main() anyerror!void {
         player_a += 2.0 * math.pi / da;
 
         // clear frame
-        var framebuffer = try allocator.create([win_w * win_h]u32);
         for (framebuffer) |_, i| {
             framebuffer[i] = white;
         }
