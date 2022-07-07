@@ -65,7 +65,7 @@ pub fn main() anyerror!void {
         draw_view(framebuffer, player_x, player_y, player_a);
 
         // render output
-        const filename = try std.fmt.allocPrintZ(allocator, "step7_{d:0>3.0}.ppm", .{frame});
+        const filename = try std.fmt.allocPrintZ(allocator, "step8_{d:0>3.0}.ppm", .{frame});
         const imageFile = try fs.cwd().createFile(filename, .{});
         defer imageFile.close();
         try graphics.drop_ppm_image(allocator, imageFile.writer(), framebuffer[0..], win_w, win_h);
@@ -112,7 +112,7 @@ fn draw_view(framebuffer: []u32, player_x: f32, player_y: f32, player_a: f32) vo
             // "3D" view
             const cell = map.data[int(cx) + int(cy) * map.width];
             if (cell != ' ') {
-                const column_height = int(float(win_h) / t);
+                const column_height = int(float(win_h) / (t * math.cos(angle - player_a)));
                 const icolor = cell - '0';
                 graphics.draw_rectangle(framebuffer, win_w, win_h, win_w / 2 + i, win_h / 2 - column_height / 2, 1, column_height, colors[icolor]);
                 break;
