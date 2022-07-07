@@ -66,7 +66,7 @@ pub fn main() anyerror!void {
         const filename = try std.fmt.allocPrintZ(allocator, "step7_{d:0>3.0}.ppm", .{frame});
         const imageFile = try fs.cwd().createFile(filename, .{});
         defer imageFile.close();
-        try graphics.drop_ppm_image(imageFile.writer(), framebuffer[0..], win_w, win_h);
+        try graphics.drop_ppm_image(allocator, imageFile.writer(), framebuffer[0..], win_w, win_h);
     }
 }
 

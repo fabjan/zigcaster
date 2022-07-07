@@ -31,15 +31,20 @@ pub fn unpack_color(color: u32) [4]u8 {
     return mem.toBytes(tmp);
 }
 
-pub fn drop_ppm_image(writer: anytype, image: []u32, w: usize, h: usize) anyerror!void {
+pub fn drop_ppm_image(allocator: mem.Allocator, writer: anytype, image: []u32, w: usize, h: usize) anyerror!void {
     assert(image.len == w * h);
 
     try writer.print("P6\n{} {}\n255\n", .{ w, h });
 
-    for (image) |color| {
+    var rgbBytes = try allocator.alloc(u8, 3 * image.len);
+    defer allocator.free(rgbBytes);
+
+    for (image) |color, i| {
         const pixel = unpack_color(color);
-        try writer.writeAll(pixel[0..3]);
+        mem.copy(u8, rgbBytes[i * 3 ..], pixel[0..]);
     }
+
+    try writer.writeAll(rgbBytes);
 }
 
 test "can unpack black" {
