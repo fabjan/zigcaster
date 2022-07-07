@@ -98,7 +98,7 @@ fn draw_view(framebuffer: []u32, player_x: f32, player_y: f32, player_a: f32) vo
         const angle = player_a - fov / 2 + ray_offset;
 
         var t: f32 = 0.0;
-        while (t < max_dist) : (t += 0.05) {
+        while (t < max_dist) : (t += 0.01) {
             const cx = player_x + t * math.cos(angle);
             const cy = player_y + t * math.sin(angle);
 
