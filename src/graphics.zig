@@ -41,7 +41,7 @@ pub fn drop_ppm_image(allocator: mem.Allocator, writer: anytype, image: []u32, w
 
     for (image) |color, i| {
         const pixel = unpack_color(color);
-        mem.copy(u8, rgbBytes[i * 3 ..], pixel[0..]);
+        mem.copy(u8, rgbBytes[(i * 3)..], pixel[0..3]);
     }
 
     try writer.writeAll(rgbBytes);
