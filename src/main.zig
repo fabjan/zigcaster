@@ -1,6 +1,9 @@
 const std = @import("std");
 const fs = std.fs;
 const math = std.math;
+const mem = std.mem;
+
+const assert = std.debug.assert;
 
 const graphics = @import("./graphics.zig");
 const map = @import("./map.zig");
@@ -22,7 +25,11 @@ fn float(n: usize) f32 {
     return @intToFloat(f32, n);
 }
 
-fn int(x: f32) usize {
+fn int(x: f32) i32 {
+    return @floatToInt(i32, x);
+}
+
+fn size(x: f32) usize {
     return @floatToInt(usize, x);
 }
 
@@ -58,10 +65,10 @@ pub fn main() anyerror!void {
     // draw the game
     draw_map(framebuffer, walltext);
     draw_player(framebuffer, player_x, player_y);
-    draw_view(framebuffer, walltext, player_x, player_y, player_a);
+    try draw_view(allocator, framebuffer, walltext, player_x, player_y, player_a);
 
     // render output
-    const imageFile = try fs.cwd().createFile("out_10.ppm", .{});
+    const imageFile = try fs.cwd().createFile("out_11.ppm", .{});
     defer imageFile.close();
     try graphics.drop_ppm_image(allocator, imageFile.writer(), framebuffer[0..], win_w, win_h);
 }
@@ -84,10 +91,10 @@ fn draw_map(framebuffer: []u32, walltext: []u32) void {
 fn draw_player(framebuffer: []u32, player_x: f32, player_y: f32) void {
     const px = math.trunc(player_x * float(rect_w));
     const py = math.trunc(player_y * float(rect_h));
-    graphics.draw_rectangle(framebuffer, win_w, win_h, int(px), int(py), 5, 5, white);
+    graphics.draw_rectangle(framebuffer, win_w, win_h, size(px), size(py), 5, 5, white);
 }
 
-fn draw_view(framebuffer: []u32, walltext: []u32, player_x: f32, player_y: f32, player_a: f32) void {
+fn draw_view(allocator: mem.Allocator, framebuffer: []u32, walltext: []u32, player_x: f32, player_y: f32, player_a: f32) !void {
     var i: usize = 0;
     while (i < win_w / 2) : (i += 1) {
         const ray_offset = fov * float(i) / float(win_w / 2);
@@ -98,28 +105,50 @@ fn draw_view(framebuffer: []u32, walltext: []u32, player_x: f32, player_y: f32, 
             const cx = player_x + t * math.cos(angle);
             const cy = player_y + t * math.sin(angle);
 
-            // visibility cone
-            const pix_x = int(cx * float(rect_w));
-            const pix_y = int(cy * float(rect_h));
-            framebuffer[pix_x + pix_y * win_w] = grey;
+            {
+                // visibility cone
+                const pix_x = size(cx * float(rect_w));
+                const pix_y = size(cy * float(rect_h));
+                framebuffer[pix_x + pix_y * win_w] = grey;
+            }
 
             // "3D" view
-            const cell = map.data[int(cx) + int(cy) * map.width];
-            if (cell != ' ') {
-                const column_height = int(float(win_h) / (t * math.cos(angle - player_a)));
-                const texid = cell - '0';
-                graphics.draw_rectangle(
-                    framebuffer,
-                    win_w,
-                    win_h,
-                    win_w / 2 + i,
-                    win_h / 2 - column_height / 2,
-                    1,
-                    column_height,
-                    walltext[texid * walltext_size],
-                );
-                break;
+            const cell = map.data[size(cx) + size(cy) * map.width];
+
+            // march through empty space
+            if (cell == ' ') {
+                continue;
             }
+
+            // if we're still here, we hit something
+            const column_height = size(float(win_h) / (t * math.cos(angle - player_a)));
+            const texid = cell - '0';
+            const hitx: f32 = cx - math.floor(cx + 0.5);
+            const hity: f32 = cy - math.floor(cy + 0.5);
+
+            var x_texcoord: i32 = int(hitx * float(walltext_size));
+            if (math.fabs(hitx) < math.fabs(hity)) {
+                x_texcoord = int(hity * float(walltext_size));
+            }
+            if (x_texcoord < 0) {
+                x_texcoord += walltext_size;
+            }
+            assert(0 <= x_texcoord and x_texcoord < walltext_size);
+
+            const column = try allocator.alloc(u32, column_height);
+            defer allocator.free(column);
+
+            graphics.texture_column(walltext, walltext_size, walltext_count, texid, @intCast(usize, x_texcoord), column);
+            var pix_x: usize = win_w / 2 + i;
+            var pix_y: usize = 0;
+            for (column) |wall_color, j| {
+                pix_y = j + win_h / 2 - column_height / 2;
+                if (pix_y < 0 or win_h <= pix_y) continue;
+                framebuffer[pix_x + pix_y * win_w] = wall_color;
+            }
+
+            // we already hit a wall, abort ray
+            break;
         }
     }
 }

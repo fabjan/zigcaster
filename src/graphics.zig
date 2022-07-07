@@ -21,6 +21,19 @@ pub fn draw_rectangle(image: []u32, img_w: usize, img_h: usize, x: usize, y: usi
     }
 }
 
+pub fn texture_column(atlas: []u32, texsize: usize, ntextures: usize, texid: usize, texcoord: usize, column: []u32) void {
+    const atlas_w: usize = texsize * ntextures;
+    const atlas_h: usize = texsize;
+    assert(atlas.len == atlas_w * atlas_h and texcoord < texsize and texid < ntextures);
+
+    var y: usize = 0;
+    while (y < column.len) : (y += 1) {
+        const pix_x: usize = texid * texsize + texcoord;
+        const pix_y: usize = (y * texsize) / column.len;
+        column[y] = atlas[pix_x + pix_y * atlas_w];
+    }
+}
+
 pub fn pack_color(r: u8, g: u8, b: u8, a: u8) u32 {
     const buf = [4]u8{ r, g, b, a };
     const color = mem.bytesToValue(u32, &buf);
