@@ -45,7 +45,7 @@ pub fn unpack_color(color: u32) [4]u8 {
     return mem.toBytes(tmp);
 }
 
-pub fn drop_ppm_image(allocator: mem.Allocator, writer: anytype, image: []u32, w: usize, h: usize) anyerror!void {
+pub fn drop_ppm_image(allocator: mem.Allocator, writer: anytype, image: []u32, w: usize, h: usize) !void {
     assert(image.len == w * h);
 
     try writer.print("P6\n{} {}\n255\n", .{ w, h });
@@ -61,7 +61,7 @@ pub fn drop_ppm_image(allocator: mem.Allocator, writer: anytype, image: []u32, w
     try writer.writeAll(rgbBytes);
 }
 
-pub fn slurp_ppm_image(reader: anytype, image: []u32, w: usize, h: usize) anyerror!void {
+pub fn slurp_ppm_image(reader: anytype, image: []u32, w: usize, h: usize) !void {
     assert(image.len == w * h);
 
     // assert netpbm variant
