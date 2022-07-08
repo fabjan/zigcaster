@@ -19,7 +19,6 @@ pub fn unpack_color(color: u32) [4]u8 {
 }
 
 pub fn drop_ppm_image(allocator: mem.Allocator, writer: anytype, fb: Pixmap) !void {
-
     try writer.print("P6\n{} {}\n255\n", .{ fb.width, fb.height });
 
     var rgbBytes = try allocator.alloc(u8, 3 * fb.width * fb.height);

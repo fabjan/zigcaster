@@ -29,9 +29,6 @@ pub fn main() !void {
 
     const allocator = arena.allocator();
 
-    // initialize player
-    const player = Player.init(3.456, 2.345, 1.523, math.pi / 3.0);
-
     // initialize resources
     var window = try Pixmap.init(allocator, win_w, win_h);
     defer window.deinit();
@@ -45,12 +42,18 @@ pub fn main() !void {
     // load textures
     try graphics.slurp_ppm_image(walltext_file.reader(), walltext);
 
-    try render(allocator, window, player, walltext);
+    // play the game
+    var player = Player.init(3.456, 2.345, 0.0, math.pi / 3.0);
 
-    // save output
-    const imageFile = try fs.cwd().createFile("out_12.ppm", .{});
-    defer imageFile.close();
-    try graphics.drop_ppm_image(allocator, imageFile.writer(), window);
+    var frame: usize = 0;
+    while (frame < 36) : (frame += 1) {
+        player.a += math.pi / 18.0;
+        try render(allocator, window, player, walltext);
+        const filename = try std.fmt.allocPrintZ(allocator, "out_12_{d:0>3.0}.ppm", .{frame});
+        const imageFile = try fs.cwd().createFile(filename, .{});
+        defer imageFile.close();
+        try graphics.drop_ppm_image(allocator, imageFile.writer(), window);
+    }
 }
 
 fn render(allocator: mem.Allocator, window: Pixmap, player: Player, walltext: Pixmap) !void {
