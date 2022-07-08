@@ -26,6 +26,10 @@ Trying to learn some Zig, using https://github.com/ssloy/tinyraycaster
 ./Taskfile test
 ```
 
+## TODO
+
+* [ ] find some library to do input and graphics
+
 ## Known issues
 
 * the asset PPM files were converted using imagemagick, and appear broken
