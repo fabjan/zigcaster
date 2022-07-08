@@ -41,7 +41,7 @@ pub fn main() !void {
     defer walltext_file.close();
 
     // load textures
-    try graphics.slurp_ppm_image(walltext_file.reader(), walltext);
+    try graphics.slurp_ppm_image(walltext_file.reader(), &walltext, false);
 
     // play the game
     var player = Player.init(3.456, 2.345, 1.523, math.pi / 3.0);

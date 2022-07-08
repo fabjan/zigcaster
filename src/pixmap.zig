@@ -8,6 +8,7 @@ pub const Pixmap = struct {
     width: usize,
     height: usize,
     pixels: []u32,
+    mask: ?u32,
 
     pub fn init(allocator: mem.Allocator, width: usize, height: usize) !Pixmap {
         const pixels = try allocator.alloc(u32, width * height);
@@ -16,6 +17,7 @@ pub const Pixmap = struct {
             .width = width,
             .height = height,
             .pixels = pixels,
+            .mask = null,
         };
     }
 

@@ -32,7 +32,7 @@ pub fn drop_ppm_image(allocator: mem.Allocator, writer: anytype, fb: Pixmap) !vo
     try writer.writeAll(rgbBytes);
 }
 
-pub fn slurp_ppm_image(reader: anytype, fb: Pixmap) !void {
+pub fn slurp_ppm_image(reader: anytype, pixmap: *Pixmap, with_mask: bool) !void {
 
     // assert netpbm variant
     assert('P' == try reader.readByte());
@@ -52,15 +52,19 @@ pub fn slurp_ppm_image(reader: anytype, fb: Pixmap) !void {
     assert('\n' == try reader.readByte());
 
     // header reading is complete, let's parse the data
-    assert(fb.width == try fmt.parseUnsigned(usize, width, 10));
-    assert(fb.height == try fmt.parseUnsigned(usize, height, 10));
+    assert(pixmap.width == try fmt.parseUnsigned(usize, width, 10));
+    assert(pixmap.height == try fmt.parseUnsigned(usize, height, 10));
 
     var i: usize = 0;
-    while (i < fb.width * fb.height) : (i += 1) {
+    while (i < pixmap.width * pixmap.height) : (i += 1) {
         const r = try reader.readByte();
         const g = try reader.readByte();
         const b = try reader.readByte();
-        fb.pixels[i] = pack_color(r, g, b, 255);
+        pixmap.pixels[i] = pack_color(r, g, b, 255);
+    }
+
+    if (with_mask) {
+        pixmap.mask = pixmap.pixels[0];
     }
 }
 
