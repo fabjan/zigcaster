@@ -67,17 +67,24 @@ pub fn main() !void {
         .zbuffer = zbuffer,
     };
 
-    // play the game
+    // initialize the game
     var player = Player.init(3.456, 2.345, 1.523, math.pi / 3.0);
-    var sprites = [_]Sprite{
+    var sprites = ([_]Sprite{
+        Sprite.init(3.123, 5.112, 2),
         Sprite.init(1.834, 8.765, 0),
         Sprite.init(5.323, 5.365, 1),
         Sprite.init(4.123, 10.265, 1),
-    };
+    })[0..];
 
-    try render(resources, player, sprites[0..]);
-    const imageFile = try fs.cwd().createFile("out_15.ppm", .{});
+    // play the game
+    update_sprites(player, sprites);
+
+    // render the game
+    try render(resources, player, sprites);
+
+    const imageFile = try fs.cwd().createFile("out_16.ppm", .{});
     defer imageFile.close();
+
     try graphics.drop_ppm_image(allocator, imageFile.writer(), window);
 }
 
@@ -183,6 +190,16 @@ fn draw_view(resources: Resources, player: Player, sprites: []Sprite) !void {
     }
 }
 
+fn update_sprites(player: Player, sprites: []Sprite) void {
+    var s: usize = 0;
+    while (s < sprites.len) : (s += 1) {
+        var sprite = &sprites[s];
+        sprite.player_dist = math.sqrt(math.pow(f32, player.x - sprite.x, 2) + math.pow(f32, player.y - sprite.y, 2));
+    }
+
+    std.sort.sort(Sprite, sprites, {}, Sprite.lessThan);
+}
+
 fn draw_sprite(resources: Resources, player: Player, sprite: Sprite) void {
     const window = resources.window;
     const monstertext = resources.monstertext;
@@ -197,9 +214,7 @@ fn draw_sprite(resources: Resources, player: Player, sprite: Sprite) void {
         sprite_dir += 2 * math.pi;
     }
 
-    const sprite_dist: f32 = math.sqrt(math.pow(f32, player.x - sprite.x, 2) + math.pow(f32, player.y - sprite.y, 2));
-
-    const sprite_screen_size: usize = math.min(2000, view_height / size(sprite_dist));
+    const sprite_screen_size: usize = math.min(2000, view_height / size(sprite.player_dist));
 
     const h_offset: i32 = int((sprite_dir - player.a) * float(view_width) / player.fov +
         float(view_width) / 2 - float(sprite_screen_size) / 2);
@@ -208,7 +223,7 @@ fn draw_sprite(resources: Resources, player: Player, sprite: Sprite) void {
     var i: i32 = 0;
     while (i < sprite_screen_size) : (i += 1) {
         if (h_offset + i < 0 or view_width <= h_offset + i) continue;
-        if (resources.zbuffer[size(h_offset + i)] < sprite_dist) continue;
+        if (resources.zbuffer[size(h_offset + i)] < sprite.player_dist) continue;
         var j: i32 = 0;
         while (j < sprite_screen_size) : (j += 1) {
             if (v_offset + j < 0 or view_height <= v_offset + j) continue;
