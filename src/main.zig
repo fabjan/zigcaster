@@ -21,8 +21,6 @@ const win_h: usize = 512;
 const tile_w = win_w / (map.width * 2);
 const tile_h = win_h / map.height;
 const max_dist: f32 = math.sqrt(2.0 * float(map.width * map.width));
-const walltext_size: usize = 64;
-const walltext_count: usize = 6;
 
 pub fn main() !void {
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
@@ -34,14 +32,21 @@ pub fn main() !void {
     var window = try Pixmap.init(allocator, win_w, win_h);
     defer window.deinit();
 
-    var walltext = try Pixmap.init(allocator, walltext_count * walltext_size, walltext_size);
+    var walltext = try Pixmap.init(allocator, 6 * 64, 64);
     defer walltext.deinit();
+
+    var monstertext = try Pixmap.init(allocator, 4 * 64, 64);
+    defer monstertext.deinit();
 
     const walltext_file = try fs.cwd().openFile("assets/walltext.ppm", .{});
     defer walltext_file.close();
 
+    const monstertext_file = try fs.cwd().openFile("assets/monsters.ppm", .{});
+    defer monstertext_file.close();
+
     // load textures
     try graphics.slurp_ppm_image(walltext_file.reader(), &walltext, false);
+    try graphics.slurp_ppm_image(monstertext_file.reader(), &monstertext, true);
 
     // play the game
     var player = Player.init(3.456, 2.345, 1.523, math.pi / 3.0);
@@ -51,15 +56,15 @@ pub fn main() !void {
         Sprite.init(4.123, 10.265, 1),
     };
 
-    try render(allocator, window, walltext, player, sprites[0..]);
-    const imageFile = try fs.cwd().createFile("out_14.ppm", .{});
+    try render(allocator, window, walltext, monstertext, player, sprites[0..]);
+    const imageFile = try fs.cwd().createFile("out_15.ppm", .{});
     defer imageFile.close();
     try graphics.drop_ppm_image(allocator, imageFile.writer(), window);
 }
 
-fn render(allocator: mem.Allocator, window: Pixmap, walltext: Pixmap, player: Player, sprites: []Sprite) !void {
+fn render(allocator: mem.Allocator, window: Pixmap, walltext: Pixmap, monstertext: Pixmap, player: Player, sprites: []Sprite) !void {
     window.fill(graphics.pack_color(255, 255, 255, 255));
-    try draw_view(allocator, window, walltext, player, sprites);
+    try draw_view(allocator, window, walltext, monstertext, player, sprites);
     draw_map(window, walltext, player, sprites);
 }
 
@@ -73,7 +78,7 @@ fn draw_map(window: Pixmap, walltext: Pixmap, player: Player, sprites: []Sprite)
             const rect_x = x * tile_w;
             const rect_y = y * tile_h;
             const texid = cell - '0';
-            const color = walltext.pixels[texid * walltext_size];
+            const color = walltext.pixels[texid * walltext.height];
             window.fill_rect(rect_x, rect_y, tile_w, tile_h, color);
         }
     }
@@ -89,7 +94,7 @@ fn draw_map(window: Pixmap, walltext: Pixmap, player: Player, sprites: []Sprite)
     }
 }
 
-fn draw_view(allocator: mem.Allocator, window: Pixmap, walltext: Pixmap, player: Player, sprites: []Sprite) !void {
+fn draw_view(allocator: mem.Allocator, window: Pixmap, walltext: Pixmap, monstertext: Pixmap, player: Player, sprites: []Sprite) !void {
     var i: usize = 0;
     fov_sweep: while (i < win_w / 2) : (i += 1) {
         const ray_offset = player.fov * float(i) / float(win_w / 2);
@@ -121,7 +126,7 @@ fn draw_view(allocator: mem.Allocator, window: Pixmap, walltext: Pixmap, player:
             const wall_strip = try Pixmap.init(allocator, 1, column_height);
             defer wall_strip.deinit();
 
-            const xoffset = wall_x_texcoord(ray_x, ray_y, walltext_size);
+            const xoffset = wall_x_texcoord(ray_x, ray_y, walltext.height);
             wall_strip.texture_column(walltext, texid, xoffset);
 
             // assumes wall_strip has width 1
@@ -142,12 +147,11 @@ fn draw_view(allocator: mem.Allocator, window: Pixmap, walltext: Pixmap, player:
     }
 
     for (sprites) |sprite| {
-        // TODO(Fabian) walltext as placeholder, repalce with monster sprite atlas
-        draw_sprite(window, walltext, player, sprite);
+        draw_sprite(window, monstertext, player, sprite);
     }
 }
 
-fn draw_sprite(window: Pixmap, _: Pixmap, player: Player, sprite: Sprite) void {
+fn draw_sprite(window: Pixmap, monstertext: Pixmap, player: Player, sprite: Sprite) void {
     const view_width: usize = window.width / 2;
     const view_height: usize = window.height;
 
@@ -173,10 +177,16 @@ fn draw_sprite(window: Pixmap, _: Pixmap, player: Player, sprite: Sprite) void {
         var j: i32 = 0;
         while (j < sprite_screen_size) : (j += 1) {
             if (v_offset + j < 0 or view_height <= v_offset + j) continue;
-            const color = graphics.pack_color(0, 0, 0, 255);
-            const x: usize = view_width + size(h_offset + i);
-            const y: usize = size(v_offset + j);
-            window.put(x, y, color);
+            const u = float(i) / float(sprite_screen_size);
+            const v = float(j) / float(sprite_screen_size);
+            const text_x = sprite.texid * monstertext.height + size(u * float(monstertext.height));
+            const text_y = size(v * float(monstertext.height));
+            const color = monstertext.get(text_x, text_y);
+            const screen_x: usize = view_width + size(h_offset + i);
+            const screen_y: usize = size(v_offset + j);
+            if (color != monstertext.mask) {
+                window.put(screen_x, screen_y, color);
+            }
         }
     }
 }
