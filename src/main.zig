@@ -9,6 +9,7 @@ const graphics = @import("./graphics.zig");
 const map = @import("./map.zig");
 const Pixmap = @import("./pixmap.zig").Pixmap;
 const Player = @import("./player.zig").Player;
+const Sprite = @import("./sprite.zig").Sprite;
 
 const byte = convert.byte;
 const float = convert.float;
@@ -43,27 +44,26 @@ pub fn main() !void {
     try graphics.slurp_ppm_image(walltext_file.reader(), walltext);
 
     // play the game
-    var player = Player.init(3.456, 2.345, 0.0, math.pi / 3.0);
+    var player = Player.init(3.456, 2.345, 1.523, math.pi / 3.0);
+    var sprites = [_]Sprite{
+        Sprite.init(1.834, 8.765, 0),
+        Sprite.init(5.323, 5.365, 1),
+        Sprite.init(4.123, 10.265, 1),
+    };
 
-    var frame: usize = 0;
-    while (frame < 36) : (frame += 1) {
-        player.a += math.pi / 18.0;
-        try render(allocator, window, player, walltext);
-        const filename = try std.fmt.allocPrintZ(allocator, "out_12_{d:0>3.0}.ppm", .{frame});
-        const imageFile = try fs.cwd().createFile(filename, .{});
-        defer imageFile.close();
-        try graphics.drop_ppm_image(allocator, imageFile.writer(), window);
-    }
+    try render(allocator, window, walltext, player, sprites[0..]);
+    const imageFile = try fs.cwd().createFile("out_13.ppm", .{});
+    defer imageFile.close();
+    try graphics.drop_ppm_image(allocator, imageFile.writer(), window);
 }
 
-fn render(allocator: mem.Allocator, window: Pixmap, player: Player, walltext: Pixmap) !void {
+fn render(allocator: mem.Allocator, window: Pixmap, walltext: Pixmap, player: Player, sprites: []Sprite) !void {
     window.fill(graphics.pack_color(255, 255, 255, 255));
-    draw_map(window, walltext);
-    draw_player(window, player);
     try draw_view(allocator, window, walltext, player);
+    draw_map(window, walltext, player, sprites);
 }
 
-fn draw_map(window: Pixmap, walltext: Pixmap) void {
+fn draw_map(window: Pixmap, walltext: Pixmap, player: Player, sprites: []Sprite) void {
     var x: usize = 0;
     while (x < map.width) : (x += 1) {
         var y: usize = 0;
@@ -77,12 +77,16 @@ fn draw_map(window: Pixmap, walltext: Pixmap) void {
             window.fill_rect(rect_x, rect_y, tile_w, tile_h, color);
         }
     }
-}
 
-fn draw_player(window: Pixmap, player: Player) void {
     const px = math.trunc(player.x * float(tile_w));
     const py = math.trunc(player.y * float(tile_h));
-    window.fill_rect(size(px), size(py), 5, 5, graphics.pack_color(255, 255, 255, 255));
+    window.fill_rect(size(px) - 2, size(py) - 2, 5, 5, graphics.pack_color(2, 200, 20, 255));
+
+    for (sprites) |sprite| {
+        const sx = math.trunc(sprite.x * float(tile_w));
+        const sy = math.trunc(sprite.y * float(tile_h));
+        window.fill_rect(size(sx) - 2, size(sy) - 2, 5, 5, graphics.pack_color(255, 0, 0, 255));
+    }
 }
 
 fn draw_view(allocator: mem.Allocator, window: Pixmap, walltext: Pixmap, player: Player) !void {
@@ -93,17 +97,17 @@ fn draw_view(allocator: mem.Allocator, window: Pixmap, walltext: Pixmap, player:
 
         var t: f32 = 0.0;
         ray_march: while (t < max_dist) : (t += 0.01) {
-            const cx = player.x + t * math.cos(angle);
-            const cy = player.y + t * math.sin(angle);
+            const ray_x = player.x + t * math.cos(angle);
+            const ray_y = player.y + t * math.sin(angle);
 
             // visibility cone
             {
-                const pix_x = size(cx * float(tile_w));
-                const pix_y = size(cy * float(tile_h));
+                const pix_x = size(ray_x * float(tile_w));
+                const pix_y = size(ray_y * float(tile_h));
                 window.put(pix_x, pix_y, graphics.pack_color(160, 160, 160, 255));
             }
 
-            const cell = map.data[size(cx) + size(cy) * map.width];
+            const cell = map.data[size(ray_x) + size(ray_y) * map.width];
             // march through empty space
             if (cell == ' ') {
                 continue :ray_march;
@@ -117,7 +121,7 @@ fn draw_view(allocator: mem.Allocator, window: Pixmap, walltext: Pixmap, player:
             const wall_strip = try Pixmap.init(allocator, 1, column_height);
             defer wall_strip.deinit();
 
-            const xoffset = wall_x_texcoord(cx, cy, walltext_size);
+            const xoffset = wall_x_texcoord(ray_x, ray_y, walltext_size);
             wall_strip.texture_column(walltext, texid, xoffset);
 
             // assumes wall_strip has width 1
@@ -138,15 +142,15 @@ fn draw_view(allocator: mem.Allocator, window: Pixmap, walltext: Pixmap, player:
     }
 }
 
-fn wall_x_texcoord(x: f32, y: f32, texsize: usize) usize {
-    const hitx: f32 = x - math.floor(x + 0.5);
-    const hity: f32 = y - math.floor(y + 0.5);
+fn wall_x_texcoord(hitx: f32, hity: f32, texsize: usize) usize {
+    const x: f32 = hitx - math.floor(hitx + 0.5);
+    const y: f32 = hity - math.floor(hity + 0.5);
 
-    var x_texcoord: i32 = int(hitx * float(texsize));
+    var x_texcoord: i32 = int(x * float(texsize));
 
     // for north-south walls, the x coord depends on the world y coord
-    if (math.fabs(hitx) < math.fabs(hity)) {
-        x_texcoord = int(hity * float(texsize));
+    if (math.fabs(x) < math.fabs(y)) {
+        x_texcoord = int(y * float(texsize));
     }
 
     // wrap around negative coords
