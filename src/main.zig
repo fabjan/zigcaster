@@ -83,6 +83,10 @@ pub fn main() !void {
 
 fn render(resources: Resources, player: Player, sprites: []Sprite) !void {
     resources.window.fill(graphics.pack_color(255, 255, 255, 255));
+    for (resources.zbuffer) |_, x| {
+        resources.zbuffer[x] = 10000;
+    }
+
     try draw_view(resources, player, sprites);
     draw_map(resources, player, sprites);
 }
@@ -144,8 +148,11 @@ fn draw_view(resources: Resources, player: Player, sprites: []Sprite) !void {
             }
 
             // if we're still here, we hit something
-            const column_height = size(float(win_h) / (t * math.cos(angle - player.a)));
+            const z = (t * math.cos(angle - player.a));
+            const column_height = size(float(win_h) / z);
             const texid = cell - '0';
+
+            resources.zbuffer[i] = z;
 
             // the loop below assumes wall_strip has width 1
             const wall_strip = try Pixmap.init(resources.allocator, 1, column_height);
@@ -201,6 +208,7 @@ fn draw_sprite(resources: Resources, player: Player, sprite: Sprite) void {
     var i: i32 = 0;
     while (i < sprite_screen_size) : (i += 1) {
         if (h_offset + i < 0 or view_width <= h_offset + i) continue;
+        if (resources.zbuffer[size(h_offset + i)] < sprite_dist) continue;
         var j: i32 = 0;
         while (j < sprite_screen_size) : (j += 1) {
             if (v_offset + j < 0 or view_height <= v_offset + j) continue;
