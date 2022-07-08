@@ -1,4 +1,4 @@
-pub fn float(n: usize) f32 {
+pub fn float(n: anytype) f32 {
     return @intToFloat(f32, n);
 }
 
